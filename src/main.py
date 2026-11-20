@@ -1,6 +1,7 @@
 """Command-line entrypoint for the FitDesk Enquiry Assistant."""
 
 import argparse
+import os
 from pathlib import Path
 import sys
 
@@ -45,7 +46,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_LOG_PATH,
         help="Path to status log JSON file.",
     )
+    parser.add_argument(
+        "--provider",
+        choices=("gemini", "bedrock"),
+        default=None,
+        help="LLM provider (default: LLM_PROVIDER env var, else gemini). "
+        "bedrock uses your AWS credentials and BEDROCK_MODEL_ID / BEDROCK_REGION.",
+    )
     return parser
+
+
+def build_llm_parser(provider: str | None) -> GeminiEnquiryParser:
+    """Gemini is the brief's default. Bedrock is an optional drop-in with the same contract."""
+    choice = (provider or os.getenv("LLM_PROVIDER") or "gemini").strip().lower()
+    if choice == "bedrock":
+        from src.bedrock_client import BedrockEnquiryParser
+
+        return BedrockEnquiryParser()
+    return GeminiEnquiryParser()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -86,7 +104,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
 
         assistant = FitDeskAssistant(
-            parser=GeminiEnquiryParser(),
+            parser=build_llm_parser(args.provider),
             data_store=data_store,
             log_path=args.log,
         )

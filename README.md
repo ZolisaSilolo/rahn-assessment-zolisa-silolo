@@ -29,7 +29,7 @@ flowchart TD
     V -- no --> X0["exit 1, nothing logged"]
     V -- yes --> D0{"studio_data.json valid?"}
     D0 -- no --> X1["log error_data_unavailable<br/>(Gemini never called)"]
-    D0 -- yes --> B["Gemini (20 s timeout)<br/>JSON validated by Pydantic"]
+    D0 -- yes --> B["Gemini (default) or Bedrock (optional)<br/>20 s timeout · JSON validated by Pydantic"]
     B -- "error / timeout / no key" --> E1["log error_ai_service_failure"]
     B -- "invalid JSON" --> E2["log error_invalid_ai_output"]
     B -- valid --> C["lookup: approved data only"]
@@ -52,11 +52,11 @@ message ─> validate ─> load+validate data ─> Gemini JSON ─> Pydantic ─
 | RAHN layer | Where |
 |---|---|
 | 01 Data ingestion | `src/main.py` (CLI), `src/data_store.py` (approved data) |
-| 02 LLM reasoning | `src/gemini_client.py` |
+| 02 LLM reasoning | `src/gemini_client.py` (default), `src/bedrock_client.py` (optional) |
 | 03 Tool constraints | `src/models.py` (Pydantic), `src/data_store.py` (alias lookup), `draft_reply` in `src/assistant.py` |
 | 04 Human approval gate | `prompt_human_approval` in `src/assistant.py` |
 | 05 Action output | `append_status_log` in `src/assistant.py` (atomic; backs up a corrupt log) |
-| 06 Verification | `tests/` (32 offline tests), `docs/REGRESSION_TESTS.md` |
+| 06 Verification | `tests/` (41 offline tests), `docs/REGRESSION_TESTS.md` |
 
 ---
 
@@ -77,12 +77,14 @@ message ─> validate ─> load+validate data ─> Gemini JSON ─> Pydantic ─
 ├── src/
 │   ├── models.py             # Pydantic models, escalation phrase, safety invariants
 │   ├── data_store.py         # Data validation and deterministic lookup
-│   ├── gemini_client.py      # Gemini structured-output client
+│   ├── gemini_client.py      # Gemini structured-output client (default provider)
+│   ├── bedrock_client.py     # Optional Amazon Bedrock provider (Converse API, same contract)
 │   ├── assistant.py          # Pipeline, approval gate, status log
 │   └── main.py               # CLI entry point
 ├── tests/
 │   ├── test_assistant.py     # RT-01..RT-09 (the six required scenarios and more)
-│   └── test_hardening.py     # RT-10..RT-19 (timeouts, bad data, log safety, invariants)
+│   ├── test_hardening.py     # RT-10..RT-19 (timeouts, bad data, log safety, invariants)
+│   └── test_bedrock.py       # BR-01..BR-06 (optional Bedrock provider, client faked)
 └── .kiro/                    # AI-tool guardrails used while building (see AI use)
     ├── hooks/                # Scope, secret and approval guards; RAPLH loop prompts
     ├── scripts/              # pre_tool_guard.py, loop_guard.py, session_status.py, self-test
@@ -136,6 +138,18 @@ asks `Send? (y/n)`, and appends the outcome to `status_log.json`. Exit code 0 me
 was processed (whatever the status); 1 means it was not (invalid input, bad data, or an
 unwritable log).
 
+### Optional: Amazon Bedrock instead of Gemini
+
+Gemini is the default, as the brief requires. To use Amazon Bedrock (Amazon Nova Micro in
+`us-east-1`) with your AWS credentials instead of a Gemini key:
+
+```bash
+python -m src.main --provider bedrock --message "How much is the 12-session pack and do you have Saturday slots?"
+```
+
+`BEDROCK_MODEL_ID` and `BEDROCK_REGION` override the defaults. Bedrock charges per token, a
+fraction of a cent per enquiry. The same Pydantic validation, data lookup and approval gate apply.
+
 ---
 
 ## How to Run Tests (No API Key Required)
@@ -144,7 +158,8 @@ unwritable log).
 python -m pytest -v
 ```
 
-Expected result: **32 passed**. Gemini is faked in every test; no network or key is used.
+Expected result: **41 passed**. Gemini and Bedrock are faked in every test; no network, key or AWS
+account is used.
 
 ---
 
@@ -161,8 +176,10 @@ Expected result: **32 passed**. Gemini is faked in every test; no network or key
     `tests/test_hardening.py`;
   * rewrote `docs/SRS.md`, `docs/REGRESSION_TESTS.md` and this README;
   * added RAPLH iterations 3–5.
-* **Google Gemini API (`gemini-2.5-flash` by default):** used at runtime only, to parse enquiries
-  into structured JSON.
+* **Google Gemini API (`gemini-2.5-flash` by default):** the runtime model required by the brief,
+  used to parse enquiries into structured JSON.
+* **Amazon Bedrock (`amazon.nova-micro-v1:0`, `us-east-1`):** an optional runtime provider
+  (`--provider bedrock`), used for the live end-to-end checks L-01..L-03.
 * **Not AI:** the Working style section and the hours figure.
   <!-- Candidate: keep that line true. Write Working style yourself and fill in the hours. -->
 
@@ -170,11 +187,13 @@ Expected result: **32 passed**. Gemini is faked in every test; no network or key
 
 ## What Doesn't Work Yet
 
-1. **Live Gemini path not yet verified end to end.** All tests fake the API. A live run with a real
-   key (M-05 in `docs/REGRESSION_TESTS.md`) is still pending, and the default model name may need
-   changing to whatever your free tier offers.
+1. **Live Gemini path not verified.** The live end-to-end checks ran on Amazon Bedrock (L-01..L-03
+   in `docs/REGRESSION_TESTS.md`). The Gemini path is covered only by tests with a faked SDK, and
+   the default model name may need changing to whatever your free tier offers.
 2. **Mixed enquiries escalate completely.** One unknown fact (for example Sunday hours) replaces the
-   whole reply with the escalation phrase; known facts in the same message are not answered.
+   whole reply with the escalation phrase. In live run L-03, an enquiry with an injected
+   instruction was classified out of scope and escalated. That is safe (no invented price), but the
+   genuine single-session question went unanswered.
 3. **Fixed alias list.** Package and slot names must map to the aliases in `src/data_store.py`.
    Unusual phrasing escalates rather than guessing.
 4. **`sent` does not transmit anything.** It records staff approval; staff paste the reply into

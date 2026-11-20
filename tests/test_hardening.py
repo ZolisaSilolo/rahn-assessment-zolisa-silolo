@@ -56,6 +56,7 @@ def make_assistant(parser, log_path, answers=("y",)):
 @pytest.fixture(autouse=True)
 def no_api_key(monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
     monkeypatch.setattr(cli, "load_dotenv", lambda *a, **k: False)
 
 
