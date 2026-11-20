@@ -1,6 +1,6 @@
 # FitDesk Enquiry Assistant — RAHN Jan 2027 Assessment
 
-**Hours spent:** `[TODO: Replace with actual hours spent before submitting, e.g., 3.5 hours]`
+**Hours spent:** 4 hours.
 
 A command-line AI enquiry assistant for a small fitness studio in Hermanus. It follows RAHN's
 6-layer agent framework and the two non-negotiable rules, **No Invented Data** and
@@ -100,8 +100,8 @@ message ─> validate ─> load+validate data ─> Gemini JSON ─> Pydantic ─
 
 1. **Clone and enter the repository:**
    ```bash
-   git clone https://github.com/<your-username>/rahn-assessment-firstname-lastname.git
-   cd rahn-assessment-firstname-lastname
+   git clone https://github.com/ZolisaSilolo/rahn-assessment-zolisa-silolo.git
+   cd rahn-assessment-zolisa-silolo
    ```
 2. **Create and activate a virtual environment:**
    * Windows (PowerShell):
@@ -202,6 +202,9 @@ account is used.
 6. **No retry or backoff.** A rate limit (HTTP 429) or network blip fails safe immediately.
 7. **Local JSON log only.** Writes are atomic, but two staff running the tool at the same moment
    could lose one record. Timestamps are UTC.
+8. **Working style section not completed.** The four section 08 answers were not written before the
+   submission deadline. They must be written without AI, so they were left blank rather than
+   filled in by a tool.
 
 ---
 
