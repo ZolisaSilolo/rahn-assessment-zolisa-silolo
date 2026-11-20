@@ -84,7 +84,11 @@ message ─> validate ─> load+validate data ─> Gemini JSON ─> Pydantic ─
 ├── tests/
 │   ├── test_assistant.py     # RT-01..RT-09 (the six required scenarios and more)
 │   ├── test_hardening.py     # RT-10..RT-19 (timeouts, bad data, log safety, invariants)
-│   └── test_bedrock.py       # BR-01..BR-06 (optional Bedrock provider, client faked)
+│   ├── test_bedrock.py       # BR-01..BR-06 (optional Bedrock provider, client faked)
+│   ├── test_aws_handler.py   # AWS-01..AWS-09 (Lambda handler, fake DynamoDB)  [aws-deploy]
+│   └── test_frontend_sigv4.py # FE-01..FE-02 (browser SigV4 matches botocore)  [aws-deploy]
+├── aws/                      # [aws-deploy] SAM template, Lambda handler, build/deploy scripts,
+│   └── frontend/             #   staff CLI client, and the static web app (index.html, app.js, sigv4.js)
 └── .kiro/                    # AI-tool guardrails used while building (see AI use)
     ├── hooks/                # Scope, secret and approval guards; RAPLH loop prompts
     ├── scripts/              # pre_tool_guard.py, loop_guard.py, session_status.py, self-test
@@ -159,7 +163,17 @@ python -m pytest -v
 ```
 
 Expected result: **41 passed**. Gemini and Bedrock are faked in every test; no network, key or AWS
-account is used.
+account is used. On the `aws-deploy` branch the suite also covers the AWS handler and the browser
+signer: **63 passed**.
+
+---
+
+## Running on AWS (branch `aws-deploy`, optional)
+
+The same `src/` code also runs as a staff web app in `us-east-1`. It uses Bedrock Nova Micro,
+Lambda behind an IAM-auth function URL, DynamoDB, CloudFront + private S3, and Cognito sign-in.
+Deployment steps, the architecture diagram, security choices, the verification record and removal
+steps are in [`aws/README.md`](aws/README.md). None of it is needed to run or test the CLI.
 
 ---
 
@@ -180,6 +194,9 @@ account is used.
   used to parse enquiries into structured JSON.
 * **Amazon Bedrock (`amazon.nova-micro-v1:0`, `us-east-1`):** an optional runtime provider
   (`--provider bedrock`), used for the live end-to-end checks L-01..L-03.
+* **Kiro CLI, after submission (branch `aws-deploy` only):** built and deployed the AWS staff API
+  and web app, verified them live (S-1..S-8, W-1..W-10, E2E-1..E2E-4), and documented them in
+  RAPLH iterations 8–10.
 * **Not AI:** the Working style section and the hours figure.
   <!-- Candidate: keep that line true. Write Working style yourself and fill in the hours. -->
 

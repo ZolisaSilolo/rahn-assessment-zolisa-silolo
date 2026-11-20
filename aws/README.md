@@ -4,6 +4,21 @@ This branch runs the same assistant as a staff web app on AWS in `us-east-1`. Pa
 **Amazon Bedrock** (Amazon Nova Micro). The graded submission on `main` is the local CLI, with
 Gemini as the brief requires; nothing here is needed to run or test it.
 
+## Current deployment (kept running; updated 20 Nov 2026, 17:20 SAST)
+
+| Item | Value |
+|---|---|
+| Staff web app | https://d235xr6hilo5x2.cloudfront.net/ |
+| API (IAM-signed only) | `https://fdfjy3hturvjercahdvmllgcty0mufvx.lambda-url.us-east-1.on.aws/` |
+| Stack / Region | `fitdesk-enquiry-assistant` / `us-east-1` |
+| Staff users | 1 (the project owner), invited by email; must set a new password at first sign-in |
+| Data | DynamoDB records expire after 30 days; logs are kept 14 days and hold no customer text |
+| Running cost | Close to zero when idle (no always-on servers). Usage costs: Bedrock per token (a fraction of a cent per enquiry); Lambda, DynamoDB and S3 per request; CloudFront per request and GB; Cognito Essentials includes 10,000 monthly active users in its free tier |
+
+**First sign-in:** open the web app, click **Sign in**, use the email address and the temporary
+password Cognito sent, then choose a new password (at least 12 characters, with upper and lower
+case, a number and a symbol). Optionally set up an authenticator app (TOTP) for MFA.
+
 ## Architecture
 
 ```mermaid
@@ -51,12 +66,26 @@ aws cognito-idp admin-create-user --region us-east-1 --user-pool-id <UserPoolId 
 
 Then open the `FrontendUrl` output.
 
-## Remove everything
+## Remove everything (not done; the stack is being kept)
 
 ```powershell
 aws s3 rm s3://<FrontendBucketName output> --recursive
 sam delete --stack-name fitdesk-enquiry-assistant --region us-east-1
 ```
+
+This removes the CloudFront distribution, the S3 bucket, the Cognito user pool (including staff
+accounts), the identity pool, the Lambda function and its URL, the DynamoDB table, the log group
+and both IAM roles.
+
+## Operating notes
+
+- **Add or remove staff:** `aws cognito-idp admin-create-user …` (see above) or
+  `admin-delete-user`. Remove leavers promptly; `admin-user-global-sign-out` ends their sessions.
+- **Change prices or Saturday slots:** edit `data/studio_data.json`, then run `python aws/build.py`
+  and `sam deploy …`. The data file is validated on load, so a malformed edit fails safe (HTTP 503)
+  instead of quoting bad facts.
+- **Redeploy the web app only:** `python aws/deploy_frontend.py`.
+- **Check health:** `GET /health` through `aws/client.py`, or the Lambda metrics in CloudWatch.
 
 ## Verification record (20 Nov 2026)
 

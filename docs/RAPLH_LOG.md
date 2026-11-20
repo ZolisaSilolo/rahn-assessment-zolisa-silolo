@@ -274,3 +274,25 @@ example.
   values were set through input events instead. No application change was needed.
 * **Approval decision:** the candidate approved building and deploying the front end in chat.
   Real staff users still need to be added by the candidate.
+
+---
+
+## Iteration 10 — `[Genuine Record · Kiro CLI]` Hand-over: owner account, keep the stack, documentation (17:18–17:25, branch `aws-deploy`)
+
+* **Task & expected outcome:** invite the owner as the first staff user, keep the deployment
+  running, and bring all documentation on the AWS branch up to date.
+* **Instruction given to the AI tool (summary):** "Create my account (my email), keep
+  the stack and update the documentation, push the branch after marking, and fill in Working style
+  for me."
+* **Declined:** writing the Working style answers. The brief requires them to be written without
+  AI, reviewers read the repository during marking, and question 4 is about the candidate's own
+  life. `main` stays frozen as submitted.
+* **Files changed (branch only):**
+  * `aws/README.md`: current deployment, first sign-in, operating notes, removal scope.
+  * `README.md`: AWS section, project structure, AI use.
+  * `.kiro/specs/.../tasks.md`, `design.md`, and this log.
+* **Actions:** `AdminCreateUser` for the owner with email delivery; the status is
+  `FORCE_CHANGE_PASSWORD`, so a new password is required at first sign-in.
+* **Tests run & result:** `loop_guard.py` → all tests passed (documentation-only change).
+* **Approval decision:** keeping the stack and pushing the branch after marking were both decided
+  by the candidate.

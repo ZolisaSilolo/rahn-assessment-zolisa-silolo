@@ -21,8 +21,10 @@ read like templates, and any unknown fact escalates the whole reply (SRS assumpt
 | `src/main.py` | CLI wiring and exit codes | `main(argv) -> int` |
 
 `prepare_draft` and `to_entry` separate "produce a draft" from "record a human decision". The CLI
-calls them back to back. Another front end, such as a web API with an approval endpoint, can reuse
-both without changing the safety logic.
+calls them back to back. The AWS version (`aws/handler.py`, branch `aws-deploy`) exposes them as
+two requests, `POST /enquiries` and `POST /enquiries/{id}/decision`, with a DynamoDB conditional
+update so each enquiry is decided once. The staff web app and `aws/client.py` both drive that same
+two-step flow. The full AWS design and its verification are in `aws/README.md`.
 
 ## Error handling
 

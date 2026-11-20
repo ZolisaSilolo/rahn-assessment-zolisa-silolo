@@ -15,19 +15,18 @@ Deadline: **Friday 20 November 2026, 17:00 SAST.** Tasks marked [HUMAN] are the 
 
 ## Remaining for submission
 
-- [ ] 7. [HUMAN] Confirm the correct repository name (`rahn-assessment-firstname-lastname`, lowercase)
-- [ ] 8. [HUMAN] Create `.env` from `.env.example`; run the live check M-05; tell the agent the
-      result so the docs can be updated
-- [ ] 9. [HUMAN, NO AI] Write the four Working style answers (80–150 words each); fill in `Hours spent`
-- [ ] 10. [HUMAN] Review the RAPLH entries and replace each *PENDING candidate review* with your decision
-- [ ] 11. `git init`, first commit, push to a public repo (human approves the push); fresh-clone test
-- [ ] 12. [HUMAN] Email the repo link to sybil@rahn.co.za, subject exactly
-      `RAHN Jan 2027 Assessment — Firstname Lastname`, by 17:00
+- [x] 7. Repository name `rahn-assessment-zolisa-silolo` (public)
+- [x] 8. Live check: done on Amazon Bedrock (L-01..L-03); the live Gemini run was not done (M-05)
+- [ ] 9. [HUMAN, NO AI] Working style answers. Not written by the deadline; stated honestly in the README.
+- [x] 10. RAPLH entries approved by the candidate
+- [x] 11. Pushed, fresh clone passed 41/41
+- [x] 12. Submission emailed 20 Nov 2026, 16:40 SAST (before the 17:00 deadline). `main` frozen since.
 
-## Phase 2 (after submission is safe): run on AWS as a real application
+## Phase 2: run on AWS as a real application (branch `aws-deploy`)
 
-- [ ] 13. Confirm the AWS project, selected Region, plan (free or paid) and spend limit
-- [ ] 14. Agree the design: API front end (`prepare_draft`) + approval endpoint (`to_entry`) +
-      DynamoDB log + the Gemini key in SSM Parameter Store, all in the selected Region.
-      Keep it on a separate branch so the graded `main` stays within the brief's free-tools rule.
-- [ ] 15. Build with IaC; deploy only after explicit approval; smoke test; decide on cleanup
+- [x] 13. Region `us-east-1` chosen by the candidate (the account already runs workloads there)
+- [x] 14. Staff API: Lambda function URL (IAM auth) + DynamoDB + Bedrock Nova Micro; checks S-1..S-8
+- [x] 15. Staff web app: private S3 + CloudFront OAC + CSP, Cognito managed login (PKCE), identity
+      pool + browser SigV4; checks W-1..W-10 and E2E-1..E2E-4 in a real browser
+- [x] 16. Owner staff account invited by email; the stack is kept running
+- [ ] 17. Push `aws-deploy` to GitHub after marking (23–27 Nov), as agreed with the candidate
