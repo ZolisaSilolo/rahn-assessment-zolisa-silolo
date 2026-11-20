@@ -54,3 +54,20 @@ bucket.
 
 `tests/test_aws_handler.py` (AWS-01..AWS-09) runs offline with a fake DynamoDB table and a faked
 model, as part of `python -m pytest`.
+
+## Deployment record (20 Nov 2026, 16:45 SAST)
+
+The stack `fitdesk-enquiry-assistant` was deployed to `us-east-1` with SAM (`CREATE_COMPLETE`).
+It contains the Lambda function, an IAM-auth function URL, a DynamoDB table, a log group with
+14-day retention, and the IAM role.
+
+| ID | Check | Result |
+|---|---|---|
+| S-1 | Unsigned POST to the function URL | HTTP 403 (no public access) |
+| S-2 | Staff client: "How much is the 12-session pack and do you have Saturday slots?", answer `y` | Bedrock draft `12 sessions: R1,680 … 09:00: Available, 10:00: Full, 11:00: Available`; stored `sent`, `decided_by` = the caller's IAM ARN |
+| S-3 | "What does a 20-session pack cost?", answer `n` | Exact escalation phrase; stored `escalated_not_sent` |
+| S-4 | Second decision on the already-sent enquiry | HTTP 409; status stays `sent` |
+| S-5 | Decision with `"approve": "yes"` (not a boolean) | HTTP 400 |
+| S-6 | `GET /health` | HTTP 200 |
+| S-7 | CloudWatch log contents | Method, path and status code only; no customer text found |
+| S-8 | DynamoDB records | 2 items, each with `expires_at` 30 days ahead (TTL) |

@@ -224,3 +224,23 @@ example.
       No invented price, but the genuine question went unanswered (recorded under "What doesn't
       work yet").
 * **Approval decision:** **Approved by the candidate** (20 Nov 2026, decision given as "approve all").
+
+---
+
+## Iteration 8 — `[Genuine Record · Kiro CLI]` Deploy to AWS `us-east-1` after submission (16:40–16:50, branch `aws-deploy`)
+
+* **Task & expected outcome:** deploy the staff API after the submission email was sent, and
+  prove that the human gate and no-invented-data rules hold in the cloud.
+* **Instruction given to the AI tool (summary):** "I have sent it… continue to deploy."
+* **Human gate:** the candidate approved the deployment explicitly. Before deploying, read-only
+  checks confirmed there was no existing function, stack or log group with the same names.
+* **Files changed (branch only):** `aws/README.md` (deployment record), this log. `main` was left
+  frozen exactly as submitted.
+* **Tests run & result:**
+  * `loop_guard.py` → all tests passed.
+  * `sam deploy` → `CREATE_COMPLETE`.
+  * Live checks S-1..S-8 all passed: unsigned requests are rejected, the draft comes from the data
+    file only, an enquiry can't be decided twice, the approval must be a boolean, and the logs hold
+    no customer text.
+* **Approval decision:** deployment approved by the candidate. Whether to keep or delete the stack
+  is still to be decided.
