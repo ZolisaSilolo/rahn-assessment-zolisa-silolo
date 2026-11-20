@@ -1,6 +1,6 @@
 # FitDesk Enquiry Assistant — RAHN Jan 2027 Assessment
 
-**Hours spent:** 2 h 21 min (20 Nov 2026, 12:48–15:09), not counting the Working style section.
+**Hours spent:** 4 hours.
 
 A command-line AI enquiry assistant for a small fitness studio in Hermanus. It follows RAHN's
 6-layer agent framework and the two non-negotiable rules, **No Invented Data** and
@@ -100,8 +100,8 @@ message ─> validate ─> load+validate data ─> Gemini JSON ─> Pydantic ─
 
 1. **Clone and enter the repository:**
    ```bash
-   git clone https://github.com/ZolisaSilolo/RAHN_Internship_Project.git
-   cd RAHN_Internship_Project
+   git clone https://github.com/ZolisaSilolo/rahn-assessment-zolisa-silolo.git
+   cd rahn-assessment-zolisa-silolo
    ```
 2. **Create and activate a virtual environment:**
    * Windows (PowerShell):

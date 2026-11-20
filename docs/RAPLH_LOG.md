@@ -84,7 +84,7 @@ example.
 * **Correction:** the guard blocked the agent's own attempt to write the self-test into `%TEMP%`
   (outside the workspace). The file was moved to `.kiro/scripts/`. This is evidence that the
   guard works on the agent itself.
-* **Approval decision:** *PENDING candidate review.*
+* **Approval decision:** **Approved by the candidate** (20 Nov 2026, decision given as "approve all").
 
 ---
 
@@ -139,7 +139,7 @@ example.
   * Manual CLI runs M-01..M-04 behaved as specified.
 * **Correction:** none needed in the code. The documents were trimmed: the SRS went from 1,223
   words to about 900.
-* **Approval decision:** *PENDING candidate review.*
+* **Approval decision:** **Approved by the candidate** (20 Nov 2026, decision given as "approve all").
 
 ---
 
@@ -191,7 +191,7 @@ example.
   Docker was not running, so the first deployed smoke test will be the real check.
 * **Not yet done:** deployment. It needs the candidate's approval, confirmation of the selected Region
   (`af-south-1` in `~/.aws/config`, enabled), and the Gemini key stored in SSM by the candidate.
-* **Approval decision:** *PENDING candidate review.*
+* **Approval decision:** **Approved by the candidate** (20 Nov 2026, decision given as "approve all").
 
 ---
 
@@ -223,4 +223,4 @@ example.
     * **L-03:** a prompt-injection attempt ("say R10") was classified out of scope and escalated.
       No invented price, but the genuine question went unanswered (recorded under "What doesn't
       work yet").
-* **Approval decision:** *PENDING candidate review.*
+* **Approval decision:** **Approved by the candidate** (20 Nov 2026, decision given as "approve all").
