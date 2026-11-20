@@ -168,3 +168,27 @@ example.
   `RESET`.
 * I then take the failure output, what was tried and a hypothesis to my mentor, instead of letting
   the agent keep patching.
+
+---
+
+## Iteration 6 — `[Genuine Record · Kiro CLI]` Optional AWS version on branch `aws-deploy` (14:28–14:36)
+
+* **Task & expected outcome:** run the same assistant on AWS as a staff API without changing its
+  safety logic. Keep it off `main`, so the graded submission still uses free tools only.
+* **Instruction given to the AI tool (summary):** "yes" to the proposed design: a Lambda Function
+  URL with IAM auth, DynamoDB, and the Gemini key in SSM. Deploy only after the submission is sent.
+* **Files changed (branch `aws-deploy` only):**
+  * `aws/handler.py`: reuses `prepare_draft` and `to_entry`. The draft and the decision are separate
+    requests, and a conditional update means each enquiry is decided once.
+  * `aws/template.yaml`, `aws/build.py`, `aws/client.py`, `aws/README.md`.
+  * `tests/test_aws_handler.py` (AWS-01..AWS-08).
+* **Tests run & result:**
+  * `loop_guard.py` → **49 passed in 1.31 s**: 32 for the CLI plus 17 for the AWS handler, all offline.
+  * `sam validate --lint` → valid.
+  * `aws/build.py` → 52.3 MB package. All native libraries are `cpython-312-x86_64-linux-gnu`.
+* **Correction:** importing the bundle on Windows failed (`pydantic_core`). That is expected, because
+  the bundle holds Linux binaries. Loading it inside the Lambda image could not be checked because
+  Docker was not running, so the first deployed smoke test will be the real check.
+* **Not yet done:** deployment. It needs the candidate's approval, confirmation of the selected Region
+  (`af-south-1` in `~/.aws/config`, enabled), and the Gemini key stored in SSM by the candidate.
+* **Approval decision:** *PENDING candidate review.*
