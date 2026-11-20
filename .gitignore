@@ -1,0 +1,32 @@
+# Environment & secrets
+.env
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.coverage
+
+# Runtime logs
+status_log.json
+status_log.corrupt-*.json
+*.tmp
+
+# Kiro runtime state (hooks and spec are committed; per-session state is not)
+.kiro/state/
+.kiro/current_task_files.txt
+
+# Assessment brief PDFs (do not commit RAHN source PDFs to public repo)
+*.pdf
+
+# OS & editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

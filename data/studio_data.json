@@ -1,0 +1,12 @@
+{
+  "packages": {
+    "Single session": "R180",
+    "5 sessions": "R800",
+    "12 sessions": "R1,680"
+  },
+  "saturday_availability": {
+    "Saturday 09:00": "Available",
+    "Saturday 10:00": "Full",
+    "Saturday 11:00": "Available"
+  }
+}

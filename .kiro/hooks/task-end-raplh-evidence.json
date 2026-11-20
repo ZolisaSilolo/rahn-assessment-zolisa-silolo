@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Spec task end: test evidence, RAPLH log entry, human review",
+      "trigger": "PostTaskExec",
+      "description": "Requires real test evidence and a genuine RAPLH_LOG.md entry after each spec task, then asks for human sign-off.",
+      "action": {
+        "type": "agent",
+        "prompt": "Task finished. Before calling it done:\n1. Run `python .kiro/scripts/loop_guard.py` and show the real pass/fail summary.\n2. Append one entry to docs/RAPLH_LOG.md labelled \"Genuine record\" with: the task and expected outcome; a summary of the instruction given to the AI tool; the files changed; the test command and its actual result (copy real numbers, never invent them); what was corrected; approval decision \"PENDING human review\".\n3. List the changed files and ask the human to review and approve (H step). A task is only complete with passing tests, test or demo evidence, and human sign-off."
+      }
+    }
+  ]
+}

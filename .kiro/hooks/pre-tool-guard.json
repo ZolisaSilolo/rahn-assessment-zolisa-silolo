@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Pre-tool guard (scope, secrets, Working style, external actions)",
+      "trigger": "PreToolUse",
+      "description": "Enforces RAHN loop guardrails: only files listed for the current task may change; .env is never read or written; API-key-like content is blocked; the README Working style section cannot be AI-edited; git add/commit/push cannot include .env; push/gh/web calls require human approval; writes lock after loop escalation.",
+      "matcher": "^(fs_write|fs_append|str_replace|delete_file|execute_pwsh|execute_bash)$",
+      "action": {
+        "type": "command",
+        "command": "python .kiro/scripts/pre_tool_guard.py",
+        "timeout": 30
+      }
+    }
+  ]
+}

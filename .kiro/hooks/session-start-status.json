@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Session start: deadline, loop state, scope, .env status",
+      "trigger": "SessionStart",
+      "description": "Prints the time left to the 17:00 SAST deadline, whether the RAPLH loop is escalated, the current task file scope, and whether .env is git-ignored or tracked.",
+      "action": {
+        "type": "command",
+        "command": "python .kiro/scripts/session_status.py",
+        "timeout": 30
+      }
+    }
+  ]
+}

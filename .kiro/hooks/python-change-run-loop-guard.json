@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Python change: run loop guard when the change set is complete",
+      "trigger": "PostFileSave",
+      "description": "Reminds the agent to run the tracked regression suite after Python changes, including edits outside spec tasks.",
+      "matcher": "\\.py$",
+      "action": {
+        "type": "agent",
+        "prompt": "A Python file changed. When the current change set is complete (not after every intermediate file), run `python .kiro/scripts/loop_guard.py` and read any failure before making another change. If it prints ESCALATE, stop and hand over to the human."
+      }
+    }
+  ]
+}

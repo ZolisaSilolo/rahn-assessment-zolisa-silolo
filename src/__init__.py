@@ -1,0 +1,1 @@
+"""FitDesk Enquiry Assistant package."""

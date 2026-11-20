@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Spec task start: RAPLH loop protocol",
+      "trigger": "PreTaskExec",
+      "description": "Injects the RAPLH Loop rules (scope, secrets, max attempts, no external actions) at the start of every spec task.",
+      "action": {
+        "type": "agent",
+        "prompt": "RAPLH protocol for this spec task (RAHN playbook section 04):\n1. Scope: read this task's \"Files:\" line in tasks.md and write exactly those paths, one per line, to .kiro/current_task_files.txt (the human approves that write). Change no other file. If you need another file, stop and ask.\n2. Never read, print or write .env, and never put an API key in any file.\n3. Loop: implement, then run `python .kiro/scripts/loop_guard.py`. Read the failure and find its cause before the next change. If loop_guard prints ESCALATE, stop immediately and hand over to the human with the failure output, what you tried and your diagnosis.\n4. Facts (prices, slots) come only from data/studio_data.json. Never hard-code or invent them in replies.\n5. Do not commit, push, create repos or call external services. The human does that.\n6. Never write or edit the README \"Working style\" section; tasks marked [HUMAN] are not yours."
+      }
+    }
+  ]
+}
