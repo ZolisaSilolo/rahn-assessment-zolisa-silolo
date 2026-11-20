@@ -202,6 +202,9 @@ account is used.
 6. **No retry or backoff.** A rate limit (HTTP 429) or network blip fails safe immediately.
 7. **Local JSON log only.** Writes are atomic, but two staff running the tool at the same moment
    could lose one record. Timestamps are UTC.
+8. **Working style section not completed.** The four section 08 answers were not written before the
+   submission deadline. They must be written without AI, so they were left blank rather than
+   filled in by a tool.
 
 ---
 
