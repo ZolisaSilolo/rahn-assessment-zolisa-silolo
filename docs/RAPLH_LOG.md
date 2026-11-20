@@ -8,8 +8,8 @@ example.
 - **Iterations 1–2** were written by the Antigravity CLI agent at the time.
 - **Iterations 3–5** were written by the Kiro CLI agent from its own session. Test numbers are
   copied from real runs.
-- In every entry, the "approval decision" belongs to the candidate. Entries marked
-  *PENDING candidate review* still need the candidate's own decision.
+- In every entry, the "approval decision" belongs to the candidate, who approved all iterations on
+  20 Nov 2026.
 
 ---
 
