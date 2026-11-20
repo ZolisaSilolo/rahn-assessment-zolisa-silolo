@@ -244,3 +244,33 @@ example.
     no customer text.
 * **Approval decision:** deployment approved by the candidate. Whether to keep or delete the stack
   is still to be decided.
+
+---
+
+## Iteration 9 — `[Genuine Record · Kiro CLI]` Staff web front end on CloudFront + Cognito (16:52–17:12, branch `aws-deploy`)
+
+* **Task & expected outcome:** a simple web front end for staff to draft and approve replies,
+  following AWS best practice, with the same human gate as the CLI.
+* **Instruction given to the AI tool (summary):** "Create a simple frontend to deploy to S3 web
+  hosting… using AWS best practice."
+* **Analysis:** plain S3 website hosting is HTTP-only and needs a public bucket. The agent proposed
+  a private S3 bucket + CloudFront with OAC instead, plus a Cognito sign-in. Because the API uses
+  IAM auth, signed-in staff get scoped temporary credentials from an identity pool, and the browser
+  signs each request.
+* **Files changed (branch only):**
+  * `aws/template.yaml`: S3, CloudFront, OAC, a security-headers policy, the Cognito user pool,
+    domain, client, branding and identity pool, the staff role, and function URL CORS.
+  * `aws/frontend/{index.html,app.js,sigv4.js,styles.css}`, `aws/deploy_frontend.py`.
+  * `tests/test_frontend_sigv4.py`, `aws/README.md`, `.gitignore`.
+* **Tests run & result:**
+  * `loop_guard.py` → **63 passed**, including JS SigV4 signatures matching botocore exactly.
+  * `sam validate --lint` → valid; `sam deploy` → `UPDATE_COMPLETE`.
+  * Checks W-1..W-10 passed, including an IAM simulation showing the staff role can do nothing
+    else.
+  * End-to-end tests E2E-1..E2E-4 passed in a real cloud browser: sign in, draft and send, an
+    injection attempt that was declined, and sign out. They used a temporary user that was deleted
+    afterwards, and the test records were removed.
+* **Correction:** the cloud browser timed out typing into the managed-login form, so the field
+  values were set through input events instead. No application change was needed.
+* **Approval decision:** the candidate approved building and deploying the front end in chat.
+  Real staff users still need to be added by the candidate.

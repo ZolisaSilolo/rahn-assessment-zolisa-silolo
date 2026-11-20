@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>FitDesk Enquiry Assistant · Staff</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header>
+    <h1>FitDesk Enquiry Assistant</h1>
+    <p class="tagline">Drafts come only from the approved price list and Saturday availability. Nothing is sent without your approval.</p>
+  </header>
+
+  <main>
+    <section id="signed-out" hidden>
+      <p>Staff sign-in is required.</p>
+      <button id="sign-in" type="button">Sign in</button>
+    </section>
+
+    <section id="signed-in" hidden>
+      <p class="who">Signed in as <strong id="who"></strong> · <button id="sign-out" type="button" class="link">Sign out</button></p>
+
+      <form id="enquiry-form" novalidate>
+        <label for="message">Customer message</label>
+        <textarea id="message" rows="4" maxlength="1000" required
+          placeholder="How much is the 12-session pack and do you have Saturday slots?"></textarea>
+        <div class="row">
+          <span id="count" class="muted">0 / 1000</span>
+          <button id="draft-btn" type="submit">Draft reply</button>
+        </div>
+      </form>
+
+      <section id="draft-panel" hidden aria-live="polite">
+        <h2>Draft reply</h2>
+        <p id="escalation-note" class="warn" hidden>Some facts are not in the approved data, so the draft is the escalation message.</p>
+        <pre id="draft-text"></pre>
+        <p class="question">Send?</p>
+        <div class="row">
+          <button id="send" type="button" class="primary">Send (approve)</button>
+          <button id="decline" type="button">Don't send</button>
+        </div>
+      </section>
+    </section>
+
+    <p id="status" class="status" role="status" hidden></p>
+  </main>
+
+  <footer class="muted">RAHN FitDesk · Hermanus</footer>
+</body>
+</html>

@@ -25,6 +25,7 @@ status_log.corrupt-*.json
 # AWS build artefacts
 aws/.build/
 .aws-sam/
+aws/frontend/config.js
 
 # Assessment brief PDFs (do not commit RAHN source PDFs to public repo)
 *.pdf

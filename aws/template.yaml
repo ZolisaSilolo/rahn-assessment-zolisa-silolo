@@ -2,7 +2,9 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
   FitDesk Enquiry Assistant: LLM-parsed enquiry drafts (Amazon Bedrock by default) with a mandatory
-  staff approval step. Lambda Function URL (AWS_IAM auth, no public access) + DynamoDB with 30-day TTL.
+  staff approval step. Backend: Lambda Function URL (AWS_IAM) + DynamoDB (TTL 30 days).
+  Staff web app: private S3 + CloudFront (OAC, security headers) + Cognito (managed login, PKCE)
+  + identity pool credentials scoped to invoking this one function URL.
 
 Parameters:
   LlmProvider:
@@ -26,6 +28,7 @@ Conditions:
   UseGemini: !Equals [!Ref LlmProvider, gemini]
 
 Resources:
+  # ------------------------------------------------------------------ backend
   EnquiriesTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Delete
@@ -77,6 +80,12 @@ Resources:
           GEMINI_MODEL: !Ref GeminiModel
       FunctionUrlConfig:
         AuthType: AWS_IAM # only SigV4-signed callers with lambda:InvokeFunctionUrl + InvokeFunction
+        Cors:
+          AllowOrigins:
+            - !Sub "https://${FrontendDistribution.DomainName}"
+          AllowMethods: [GET, POST]
+          AllowHeaders: [authorization, content-type, x-amz-date, x-amz-security-token, x-amz-content-sha256]
+          MaxAge: 300
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -96,6 +105,226 @@ Resources:
                 Resource: !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${GeminiApiKeyParameterName}"
               - !Ref AWS::NoValue
 
+  # ------------------------------------------------------------------ static site (private S3 + CloudFront OAC)
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete # empty it first (aws/README.md "Remove everything")
+    UpdateReplacePolicy: Delete
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  FrontendOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-frontend-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  FrontendSecurityHeaders:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub "${AWS::StackName}-security-headers"
+        SecurityHeadersConfig:
+          ContentSecurityPolicy:
+            Override: true
+            ContentSecurityPolicy: !Sub "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://*.lambda-url.${AWS::Region}.on.aws https://cognito-identity.${AWS::Region}.amazonaws.com https://fitdesk-${AWS::AccountId}.auth.${AWS::Region}.amazoncognito.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'"
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 31536000
+            IncludeSubdomains: true
+            Override: true
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: no-referrer
+            Override: true
+
+  FrontendDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: FitDesk staff web app
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: frontend-s3
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt FrontendOriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        DefaultCacheBehavior:
+          TargetOriginId: frontend-s3
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # AWS managed: CachingOptimized
+          ResponseHeadersPolicyId: !Ref FrontendSecurityHeaders
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontReadViaOAC
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${FrontendBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${FrontendDistribution}"
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !GetAtt FrontendBucket.Arn
+              - !Sub "${FrontendBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+
+  # ------------------------------------------------------------------ staff sign-in (Cognito)
+  StaffUserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      UserPoolName: !Sub "${AWS::StackName}-staff"
+      UserPoolTier: ESSENTIALS # managed login v2; 10,000 MAU free tier
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true # staff are invited; no self sign-up
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          TemporaryPasswordValidityDays: 3
+      MfaConfiguration: OPTIONAL
+      EnabledMfas: [SOFTWARE_TOKEN_MFA]
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+  StaffUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref StaffUserPool
+      Domain: !Sub "fitdesk-${AWS::AccountId}"
+      ManagedLoginVersion: 2
+
+  StaffWebClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref StaffUserPool
+      ClientName: fitdesk-staff-web
+      GenerateSecret: false # public SPA client
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows: [code] # authorization code + PKCE
+      AllowedOAuthScopes: [openid, email]
+      SupportedIdentityProviders: [COGNITO]
+      CallbackURLs:
+        - !Sub "https://${FrontendDistribution.DomainName}/"
+      LogoutURLs:
+        - !Sub "https://${FrontendDistribution.DomainName}/"
+      ExplicitAuthFlows: [ALLOW_REFRESH_TOKEN_AUTH]
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      IdTokenValidity: 60
+      AccessTokenValidity: 60
+      RefreshTokenValidity: 8
+      TokenValidityUnits:
+        IdToken: minutes
+        AccessToken: minutes
+        RefreshToken: hours
+
+  StaffLoginBranding:
+    Type: AWS::Cognito::ManagedLoginBranding
+    DependsOn: StaffUserPoolDomain
+    Properties:
+      UserPoolId: !Ref StaffUserPool
+      ClientId: !Ref StaffWebClient
+      UseCognitoProvidedValues: true
+
+  StaffIdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      AllowUnauthenticatedIdentities: false
+      AllowClassicFlow: false
+      CognitoIdentityProviders:
+        - ClientId: !Ref StaffWebClient
+          ProviderName: !GetAtt StaffUserPool.ProviderName
+          ServerSideTokenCheck: true
+
+  StaffAuthenticatedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Signed-in FitDesk staff may only invoke the FitDesk function URL.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud: !Ref StaffIdentityPool
+              ForAnyValue:StringLike:
+                cognito-identity.amazonaws.com:amr: authenticated
+      Policies:
+        - PolicyName: invoke-fitdesk-function-url
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunctionUrl
+                Resource: !GetAtt EnquiryFunction.Arn
+                Condition:
+                  StringEquals:
+                    lambda:FunctionUrlAuthType: AWS_IAM
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt EnquiryFunction.Arn
+                Condition:
+                  Bool:
+                    lambda:InvokedViaFunctionUrl: "true"
+
+  StaffIdentityPoolRoles:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref StaffIdentityPool
+      Roles:
+        authenticated: !GetAtt StaffAuthenticatedRole.Arn
+
 Outputs:
   FunctionUrl:
     Description: Staff API base URL (IAM-signed requests only)
@@ -104,3 +333,17 @@ Outputs:
     Value: !Ref EnquiriesTable
   FunctionName:
     Value: !Ref EnquiryFunction
+  FrontendUrl:
+    Value: !Sub "https://${FrontendDistribution.DomainName}/"
+  FrontendBucketName:
+    Value: !Ref FrontendBucket
+  FrontendDistributionId:
+    Value: !Ref FrontendDistribution
+  UserPoolId:
+    Value: !Ref StaffUserPool
+  UserPoolClientId:
+    Value: !Ref StaffWebClient
+  IdentityPoolId:
+    Value: !Ref StaffIdentityPool
+  CognitoDomain:
+    Value: !Sub "fitdesk-${AWS::AccountId}.auth.${AWS::Region}.amazoncognito.com"
