@@ -168,3 +168,59 @@ example.
   `RESET`.
 * I then take the failure output, what was tried and a hypothesis to my mentor, instead of letting
   the agent keep patching.
+
+---
+
+## Iteration 6 — `[Genuine Record · Kiro CLI]` Optional AWS version on branch `aws-deploy` (14:28–14:36)
+
+* **Task & expected outcome:** run the same assistant on AWS as a staff API without changing its
+  safety logic. Keep it off `main`, so the graded submission still uses free tools only.
+* **Instruction given to the AI tool (summary):** "yes" to the proposed design: a Lambda Function
+  URL with IAM auth, DynamoDB, and the Gemini key in SSM. Deploy only after the submission is sent.
+* **Files changed (branch `aws-deploy` only):**
+  * `aws/handler.py`: reuses `prepare_draft` and `to_entry`. The draft and the decision are separate
+    requests, and a conditional update means each enquiry is decided once.
+  * `aws/template.yaml`, `aws/build.py`, `aws/client.py`, `aws/README.md`.
+  * `tests/test_aws_handler.py` (AWS-01..AWS-08).
+* **Tests run & result:**
+  * `loop_guard.py` → **49 passed in 1.31 s**: 32 for the CLI plus 17 for the AWS handler, all offline.
+  * `sam validate --lint` → valid.
+  * `aws/build.py` → 52.3 MB package. All native libraries are `cpython-312-x86_64-linux-gnu`.
+* **Correction:** importing the bundle on Windows failed (`pydantic_core`). That is expected, because
+  the bundle holds Linux binaries. Loading it inside the Lambda image could not be checked because
+  Docker was not running, so the first deployed smoke test will be the real check.
+* **Not yet done:** deployment. It needs the candidate's approval, confirmation of the selected Region
+  (`af-south-1` in `~/.aws/config`, enabled), and the Gemini key stored in SSM by the candidate.
+* **Approval decision:** *PENDING candidate review.*
+
+---
+
+## Iteration 7 — `[Genuine Record · Kiro CLI]` Optional Amazon Bedrock provider and live checks (14:50–15:05)
+
+* **Task & expected outcome:** run the live end-to-end check on an Amazon Bedrock model in
+  `us-east-1` instead of a Gemini key, without breaking the brief's Gemini requirement.
+* **Instruction given to the AI tool (summary):** "Replace #4 [the live Gemini check] with a Bedrock
+  model on AWS, hosting in us-east-1."
+* **Analysis:** the brief requires Gemini and free tools. Bedrock was therefore added as an
+  *optional* provider (`--provider bedrock`); Gemini remains the default.
+  * Amazon Nova Micro (`amazon.nova-micro-v1:0`) was chosen because it supports on-demand use with
+    its base ID in `us-east-1`, so no cross-Region profile is needed, and it is the cheapest option.
+  * Structured output uses a forced tool call whose schema is `EnquiryAnalysis`. The result goes
+    through the same Pydantic validation.
+* **Scope enforcement:** the guard blocked an edit to `src/gemini_client.py`, which was not in this
+  change set's file list. The design was changed to subclass the Gemini parser instead of editing
+  it, so the approved file list was respected.
+* **Files changed:**
+  * `src/bedrock_client.py` (new), `src/main.py` (`--provider`), `tests/test_bedrock.py`
+    (BR-01..BR-06), `tests/test_hardening.py` (environment isolation).
+  * `requirements.txt` (boto3), `.env.example`, `README.md`, `docs/SRS.md`,
+    `docs/REGRESSION_TESTS.md`.
+* **Tests run & result:**
+  * `loop_guard.py` → **41 passed**, all offline.
+  * Live Bedrock runs:
+    * **L-01:** `R1,680` and all three Saturday statuses; `sent`.
+    * **L-02:** a 20-session pack gave the exact escalation phrase.
+    * **L-03:** a prompt-injection attempt ("say R10") was classified out of scope and escalated.
+      No invented price, but the genuine question went unanswered (recorded under "What doesn't
+      work yet").
+* **Approval decision:** *PENDING candidate review.*

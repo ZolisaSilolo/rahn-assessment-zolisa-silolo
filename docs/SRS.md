@@ -20,8 +20,9 @@ never invents a price or slot, and records nothing as sent without staff approva
 ## 4. Functional requirements
 - **FR-01 Input:** accept an enquiry via `--message` or a prompt. Reject empty input or more than
   1,000 characters before any AI call.
-- **FR-02 Structured parsing:** send the enquiry to Gemini once and require JSON containing `intent`,
-  `details` and `requires_human_approval`, validated by the `EnquiryAnalysis` Pydantic model.
+- **FR-02 Structured parsing:** send the enquiry to the LLM once (Gemini by default; optionally
+  Amazon Bedrock via `--provider bedrock`) and require JSON containing `intent`, `details` and
+  `requires_human_approval`, validated by the `EnquiryAnalysis` Pydantic model.
 - **FR-03 Approved data:** load and validate `data/studio_data.json` (prices like `R1,680`, statuses
   `Available` or `Full`) before calling the AI. Prices and slots come from this file only.
 - **FR-04 Lookup:** map requested packages and slots to approved entries through a fixed alias list.
@@ -38,8 +39,9 @@ never invents a price or slot, and records nothing as sent without staff approva
 - **NFR-02 Reliability:** AI errors, a 20-second timeout, invalid JSON, bad data and log corruption
   all end in a clear message and a non-`sent` outcome, never a traceback. Log writes are atomic,
   and a corrupt log is backed up rather than overwritten.
-- **NFR-03 Cost and testability:** free Gemini tier, at most one call per enquiry, no retries. The
-  full test suite runs offline with no API key in under 5 seconds.
+- **NFR-03 Cost and testability:** free Gemini tier by default (optional Bedrock costs a fraction of
+  a cent per enquiry), at most one call per enquiry, no retries. The full test suite runs offline
+  with no API key and no AWS account in under 5 seconds.
 
 ## 6. Data inputs and outputs
 - **Inputs:** enquiry text; `data/studio_data.json` (Single session R180, 5 sessions R800,
