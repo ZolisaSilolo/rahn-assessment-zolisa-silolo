@@ -2,6 +2,15 @@
 
 **Hours spent:** 4 hours.
 
+> **Post-submission note (added 20 Nov 2026, 17:30 SAST, after the 17:00 deadline).**
+> The version emailed to RAHN at 16:40 SAST is tag
+> [`submitted-2026-11-20`](https://github.com/ZolisaSilolo/rahn-assessment-zolisa-silolo/tree/submitted-2026-11-20)
+> (commit `c2f825b`). This note is the only change to `main` since then.
+> An optional AWS deployment of the same code (staff web app, Bedrock, Cognito), built after
+> submission, is on the
+> [`aws-deploy`](https://github.com/ZolisaSilolo/rahn-assessment-zolisa-silolo/tree/aws-deploy)
+> branch. It is not part of the submission.
+
 A command-line AI enquiry assistant for a small fitness studio in Hermanus. It follows RAHN's
 6-layer agent framework and the two non-negotiable rules, **No Invented Data** and
 **Human-in-the-Loop**:
