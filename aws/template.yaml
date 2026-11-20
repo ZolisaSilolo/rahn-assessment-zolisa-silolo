@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  FitDesk Enquiry Assistant: Gemini-parsed enquiry drafts with a mandatory staff approval step.
+  Lambda Function URL (AWS_IAM auth, no public access) + DynamoDB log with 30-day TTL.
+
+Parameters:
+  GeminiApiKeyParameterName:
+    Type: String
+    Default: /fitdesk/gemini-api-key
+    AllowedPattern: "^/[A-Za-z0-9/_.-]+$"
+    Description: SSM Parameter Store SecureString holding the Gemini API key (created by the human).
+  GeminiModel:
+    Type: String
+    Default: gemini-2.5-flash
+    Description: A Gemini model available on your free tier.
+
+Resources:
+  EnquiriesTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  EnquiryFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/fitdesk-enquiry-assistant
+      RetentionInDays: 14
+
+  EnquiryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: fitdesk-enquiry-assistant
+      Description: Draft replies from approved data; staff approve before anything is sent.
+      CodeUri: .build/
+      Handler: handler.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 30 # Gemini call times out at 20 s
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref EnquiryFunctionLogGroup
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref EnquiriesTable
+          GEMINI_API_KEY_PARAM: !Ref GeminiApiKeyParameterName
+          GEMINI_MODEL: !Ref GeminiModel
+      FunctionUrlConfig:
+        AuthType: AWS_IAM # only SigV4-signed callers with lambda:InvokeFunctionUrl + InvokeFunction
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource: !GetAtt EnquiriesTable.Arn
+            - Effect: Allow
+              Action: ssm:GetParameter
+              Resource: !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${GeminiApiKeyParameterName}"
+
+Outputs:
+  FunctionUrl:
+    Description: Staff API base URL (IAM-signed requests only)
+    Value: !GetAtt EnquiryFunctionUrl.FunctionUrl
+  TableName:
+    Value: !Ref EnquiriesTable
+  FunctionName:
+    Value: !Ref EnquiryFunction

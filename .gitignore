@@ -22,6 +22,10 @@ status_log.corrupt-*.json
 .kiro/state/
 .kiro/current_task_files.txt
 
+# AWS build artefacts
+aws/.build/
+.aws-sam/
+
 # Assessment brief PDFs (do not commit RAHN source PDFs to public repo)
 *.pdf
 
