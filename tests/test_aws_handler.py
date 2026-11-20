@@ -144,3 +144,18 @@ def test_aws08_routes_get_base64_and_unknown(table):
     assert call(table, event("GET", "/health"))[0] == 200
     assert call(table, event("DELETE", "/enquiries"))[0] == 404
     assert call(table, event("POST", "/enquiries/nope/decision", {"approve": True}))[0] == 404
+
+
+def test_aws09_provider_selection_on_lambda(monkeypatch):
+    """AWS-09: Bedrock by default on AWS (IAM role, no key); Gemini only when LLM_PROVIDER=gemini."""
+    from aws import handler
+    from src.bedrock_client import BedrockEnquiryParser
+
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.setenv("AWS_REGION", "us-east-1")
+    parser = handler.build_parser()
+    assert isinstance(parser, BedrockEnquiryParser) and parser.region == "us-east-1"
+
+    monkeypatch.setenv("LLM_PROVIDER", "gemini")
+    monkeypatch.setattr(handler, "_gemini_api_key", lambda: "")
+    assert type(handler.build_parser()) is GeminiEnquiryParser

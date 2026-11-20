@@ -1,19 +1,29 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  FitDesk Enquiry Assistant: Gemini-parsed enquiry drafts with a mandatory staff approval step.
-  Lambda Function URL (AWS_IAM auth, no public access) + DynamoDB log with 30-day TTL.
+  FitDesk Enquiry Assistant: LLM-parsed enquiry drafts (Amazon Bedrock by default) with a mandatory
+  staff approval step. Lambda Function URL (AWS_IAM auth, no public access) + DynamoDB with 30-day TTL.
 
 Parameters:
+  LlmProvider:
+    Type: String
+    Default: bedrock
+    AllowedValues: [bedrock, gemini]
+  BedrockModelId:
+    Type: String
+    Default: amazon.nova-micro-v1:0
+    Description: Bedrock model with ON_DEMAND support in this stack's Region (no cross-Region profile).
   GeminiApiKeyParameterName:
     Type: String
     Default: /fitdesk/gemini-api-key
     AllowedPattern: "^/[A-Za-z0-9/_.-]+$"
-    Description: SSM Parameter Store SecureString holding the Gemini API key (created by the human).
+    Description: Only used when LlmProvider=gemini (SSM SecureString created by the human).
   GeminiModel:
     Type: String
     Default: gemini-2.5-flash
-    Description: A Gemini model available on your free tier.
+
+Conditions:
+  UseGemini: !Equals [!Ref LlmProvider, gemini]
 
 Resources:
   EnquiriesTable:
@@ -53,13 +63,16 @@ Resources:
       Architectures:
         - x86_64
       MemorySize: 512
-      Timeout: 30 # Gemini call times out at 20 s
+      Timeout: 30 # model call times out at 20 s
       LoggingConfig:
         LogFormat: JSON
         LogGroup: !Ref EnquiryFunctionLogGroup
       Environment:
         Variables:
           TABLE_NAME: !Ref EnquiriesTable
+          LLM_PROVIDER: !Ref LlmProvider
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          BEDROCK_REGION: !Ref AWS::Region
           GEMINI_API_KEY_PARAM: !Ref GeminiApiKeyParameterName
           GEMINI_MODEL: !Ref GeminiModel
       FunctionUrlConfig:
@@ -74,8 +87,14 @@ Resources:
                 - dynamodb:UpdateItem
               Resource: !GetAtt EnquiriesTable.Arn
             - Effect: Allow
-              Action: ssm:GetParameter
-              Resource: !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${GeminiApiKeyParameterName}"
+              Action: bedrock:InvokeModel # Converse is authorised by bedrock:InvokeModel
+              Resource: !Sub "arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}"
+            - !If
+              - UseGemini
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${GeminiApiKeyParameterName}"
+              - !Ref AWS::NoValue
 
 Outputs:
   FunctionUrl:

@@ -60,15 +60,21 @@ def _gemini_api_key() -> str:
     return _cache["key"]
 
 
+def build_parser() -> GeminiEnquiryParser:
+    """Bedrock (default on AWS: IAM role, no key) or Gemini (key from SSM Parameter Store)."""
+    if (os.environ.get("LLM_PROVIDER") or "bedrock").lower() == "bedrock":
+        from src.bedrock_client import BedrockEnquiryParser
+
+        return BedrockEnquiryParser(
+            model_id=os.environ.get("BEDROCK_MODEL_ID") or None,
+            region=os.environ.get("BEDROCK_REGION") or os.environ.get("AWS_REGION") or None,
+        )
+    return GeminiEnquiryParser(api_key=_gemini_api_key(), model=os.environ.get("GEMINI_MODEL") or None)
+
+
 def lambda_handler(event: dict, context: Any) -> dict:
     try:
-        response = handle(
-            event,
-            table=_table(),
-            parser_factory=lambda: GeminiEnquiryParser(
-                api_key=_gemini_api_key(), model=os.environ.get("GEMINI_MODEL") or None
-            ),
-        )
+        response = handle(event, table=_table(), parser_factory=build_parser)
     except Exception as exc:  # noqa: BLE001
         print(json.dumps({"level": "ERROR", "msg": "unhandled", "error": type(exc).__name__}))
         response = _resp(500, {"error": "Internal error. Nothing was sent."})
